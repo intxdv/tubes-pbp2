@@ -11,16 +11,18 @@
 .reset-filter-btn{ width:100%; padding:10px; border:2px solid #e5e7eb; border-radius:8px; background:transparent; text-align:center; }
 .products-header{ display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
 .products-grid{ display:grid; grid-template-columns:repeat(3, minmax(240px, 1fr)); gap:20px; margin-top:18px; align-items:start; }
-.product-card{ background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 8px 30px rgba(16,24,40,0.06); cursor:pointer; display:flex; flex-direction:column; min-height:520px; }
-.product-image{ width:300%; height:340px; object-fit:cover; object-position:center; background:#f3f4f6; display:block; }
-.product-info{ padding:14px 16px; text-align:left; display:flex; flex-direction:column; gap:8px; flex:1 0 auto; }
+.product-card{ background:#fff; border-radius:26px; box-shadow:0 20px 48px rgba(15,23,42,0.14); cursor:pointer; display:flex; flex-direction:column; gap:14px; overflow:visible; padding:20px; transition:transform .18s ease, box-shadow .18s ease; }
+.product-card:hover{ transform:translateY(-8px); box-shadow:0 26px 60px rgba(15,23,42,0.18); }
+.product-thumb{ display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1 / 1; border-radius:24px; background:#f3f4f6; overflow:visible; position:relative; }
+.product-thumb img{ width:100%; height:100%; object-fit:cover; border-radius:inherit; transition:transform .28s ease; box-shadow:0 18px 36px rgba(15,23,42,0.1); }
+.product-card:hover .product-thumb img{ transform:scale(1.05); }
+.product-info{ padding:0 4px 6px; text-align:left; display:flex; flex-direction:column; gap:10px; flex:1 0 auto; }
 .product-name{ font-weight:700; color:#1f2937; margin-bottom:0; font-size:1.05rem }
 .product-price{ font-weight:800; color:#111827; margin-top:6px; font-size:1.05rem }
 .rating-row{ display:flex; align-items:center; gap:8px; margin-top:6px; color:#6b7280; }
 .stars{ color:#f6b93b; display:inline-block; }
-.add-to-cart{ display:block; margin-top:12px; padding:12px 14px; background:#253645; color:#fff; border-radius:10px; text-align:center; text-decoration:none; font-weight:800; }
 .no-results{ padding:60px; text-align:center; background:#fff; border-radius:8px; }
-@media (max-width:1024px){ .content{ grid-template-columns:1fr; } .sidebar{ position:static; } .product-image{ height:300px; } }
+@media (max-width:1024px){ .content{ grid-template-columns:1fr; } .sidebar{ position:static; } }
 </style>
 
 <div style="max-width:1280px; margin:18px auto 0;">
@@ -92,15 +94,15 @@
 
                 @foreach($products as $product)
                     @php
-                        // preview: override image for the first product so the layout can be inspected
-                        $previewImage = asset('storage/images/ckvuLjHtxDC3NgpcSAotv5p33iXRGnnDv1SnCGhY.jpg');
-                        $imgSrc = ($loop->first) ? $previewImage : ($product->image ? asset('storage/'.$product->image) : 'https://via.placeholder.com/400');
+                        $imgSrc = $product->image
+                            ? asset('storage/'.$product->image)
+                            : 'https://images.unsplash.com/photo-1512499617640-c2f999098c01?auto=format&fit=crop&w=1000&q=80';
                         $avg = $product->reviews()->exists() ? round($product->reviews()->avg('rating'),1) : null;
                         $rCount = $product->reviews()->count();
                     @endphp
                     <div class="product-card">
-                        <a href="{{ url('/products/'.$product->id) }}" style="display:block;">
-                            <img src="{{ $imgSrc }}" class="product-image" alt="{{ $product->name }}">
+                        <a href="{{ url('/products/'.$product->id) }}" class="product-thumb">
+                            <img src="{{ $imgSrc }}" alt="{{ $product->name }}">
                         </a>
                         <div class="product-info">
                             <a href="{{ url('/products/'.$product->id) }}" style="text-decoration:none; color:inherit;"><div class="product-name">{{ $product->name }}</div></a>
@@ -121,7 +123,6 @@
                                 <div style="font-size:0.95rem; color:#374151;">{{ $avg ? $avg : '—' }} @if($rCount) <span style="color:#6b7280;">({{ $rCount }})</span> @endif</div>
                             </div>
 
-                            <a href="{{ url('/products/'.$product->id) }}" class="add-to-cart">🛒 Tambah ke Keranjang</a>
                         </div>
                     </div>
                 @endforeach

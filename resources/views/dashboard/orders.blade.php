@@ -172,3 +172,149 @@
 </script>
 
 <!-- end orders -->
+
+@push('scripts')
+<script>
+function csrf(){const m=document.querySelector('meta[name="csrf-token"]');return m?m.getAttribute('content'):''}
+
+document.addEventListener('click', function(e){
+    if(e.target && e.target.id && e.target.id.startsWith('open-review-modal-')){
+        const id = e.target.id.replace('open-review-modal-','');
+        openOrderReviewModal(id);
+    }
+});
+
+async function openOrderReviewModal(orderId){
+    // fetch order details
+    try{
+        const res = await fetch(`/orders/${orderId}`, { headers: { 'Accept': 'application/json' } });
+        if(!res.ok) throw new Error('Failed to load order');
+        const order = await res.json();
+        showOrderReviewModal(order);
+    }catch(e){console.error(e); alert('Gagal memuat detail pesanan untuk review');}
+}
+
+function showOrderReviewModal(order){
+    let modal=document.getElementById('orderReviewModal');
+    if(!modal){
+        modal=document.createElement('div');
+        modal.id='orderReviewModal';
+        modal.className='modal';
+        modal.style.display='none';
+        modal.innerHTML=`
+            <div class="modal-content relative bg-white rounded-lg shadow">
+                <button onclick="closeOrderReviewModal()" class="close absolute right-4 top-4 text-gray-600 hover:text-gray-800">×</button>
+                <div id="orderReviewContent" class="p-6"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const style=document.createElement('style');
+        style.innerHTML=`
+            .modal{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:1000}
+            .modal-content{max-width:800px;width:100%;margin:20px}
+            .close{font-size:24px;cursor:pointer;border:none;background:transparent}
+            .btn-primary{background:#4F46E5;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer}
+            .btn-primary:hover{background:#4338CA}
+            .btn-secondary{background:#9CA3AF;color:white;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;margin-left:8px}
+            .btn-secondary:hover{background:#6B7280}
+        `;
+        document.head.appendChild(style);
+    }
+    const content=document.getElementById('orderReviewContent');
+    let html=`
+        <div class="mb-6">
+            <h3 class="text-xl font-bold mb-4">Berikan Review</h3>
+            <div class="space-y-4">`;
+    for(const item of order.items){
+        html += `
+            <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                    <h4 class="font-medium text-gray-900">${item.product.name}</h4>
+                    <p class="text-sm text-gray-600">Jumlah: ${item.quantity}</p>
+                </div>
+                <div>
+                    <button class="btn-primary" onclick="openProductReviewFormFromOrder(${item.product.id}, ${order.id})">
+                        Berikan Review
+                    </button>
+                </div>
+            </div>`;
+    }
+    html += `</div></div>`;
+    content.innerHTML = html;
+    modal.style.display='flex';
+}
+
+function closeOrderReviewModal(){const m=document.getElementById('orderReviewModal');if(m)m.style.display='none'}
+
+function openProductReviewFormFromOrder(productId, orderId){
+    const content=document.getElementById('orderReviewContent');
+    content.innerHTML = `
+        <div class="mb-6">
+            <h3 class="text-xl font-bold mb-4">Review Produk</h3>
+            <form id="singleReviewFormOrder" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rating:</label>
+                    <select id="review_rating_order" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                        <option value="4">⭐⭐⭐⭐ (4)</option>
+                        <option value="3">⭐⭐⭐ (3)</option>
+                        <option value="2">⭐⭐ (2)</option>
+                        <option value="1">⭐ (1)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Komentar:</label>
+                    <textarea id="review_comment_order" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Bagikan pengalaman Anda dengan produk ini..."></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button type="button" onclick="submitReviewForProductFromOrder(${productId})" class="btn-primary">Kirim Review</button>
+                    <button type="button" onclick="openOrderReviewModal(${orderId})" class="btn-secondary">Kembali</button>
+                </div>
+            </form>
+        </div>`;
+}
+
+async function submitReviewForProductFromOrder(productId){
+    const form = document.getElementById('singleReviewFormOrder');
+    const submitBtn = form.querySelector('button[type="button"]');
+    const rating = document.getElementById('review_rating_order').value;
+    const comment = document.getElementById('review_comment_order').value;
+    
+    if(!rating || !comment.trim()) {
+        alert('Rating dan komentar harus diisi');
+        return;
+    }
+    
+    try{
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Mengirim...';
+        
+        const res = await fetch(`/products/${productId}/review`,{
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json',
+                'Accept':'application/json',
+                'X-CSRF-TOKEN':csrf()
+            },
+            body:JSON.stringify({rating:rating,comment:comment})
+        });
+        
+        const data = await res.json();
+        
+        if(res.ok && data.success){
+            alert('Review berhasil dikirim!');
+            window.location.href = `/products/${productId}`;
+        } else {
+            alert(data?.message || 'Gagal mengirim review. Silakan coba lagi.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Kirim Review';
+        }
+    }catch(e){
+        console.error(e);
+        alert('Terjadi kesalahan. Silakan coba lagi.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Kirim Review';
+    }
+}
+</script>
+@endpush

@@ -45,6 +45,13 @@ class ReviewController extends Controller
             'comment' => $validated['comment'],
         ]);
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Terima kasih atas review Anda.'
+            ]);
+        }
+
         return redirect('/products/' . $productId)->with('success', 'Terima kasih atas review Anda.');
     }
 

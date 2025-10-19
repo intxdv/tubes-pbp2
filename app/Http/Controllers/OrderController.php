@@ -16,7 +16,12 @@ class OrderController extends Controller
     // Tampilkan detail order
     public function show($id)
     {
-    $order = Order::where('user_id', Auth::id())->findOrFail($id);
+    $order = Order::with(['items.product'])->where('user_id', Auth::id())->findOrFail($id);
+
+    if (request()->wantsJson() || request()->ajax()) {
+        return response()->json($order);
+    }
+
     return view('orders.show', compact('order'));
     }
 

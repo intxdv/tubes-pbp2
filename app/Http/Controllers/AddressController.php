@@ -22,9 +22,9 @@ class AddressController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'recipient_name' => 'required',
-            'phone' => 'required',
-            'address' => 'required',
+            'recipient_name' => ['required', 'string'],
+            'phone' => ['required', 'string'],
+            'address' => ['required', 'string'],
         ]);
         Address::create([
             'user_id' => Auth::id(),
@@ -45,13 +45,25 @@ class AddressController extends Controller
     public function update(Request $request, $id)
     {
         $address = Address::where('user_id', Auth::id())->findOrFail($id);
-        $address->update($request->only(['recipient_name','phone','address']));
+
+        $validated = $request->validate([
+            'recipient_name' => ['required', 'string'],
+            'phone' => ['required', 'string'],
+            'address' => ['required', 'string'],
+        ]);
+
+        $address->update($validated);
         return redirect()->route('address.index');
     }
     public function destroy($id)
     {
-        $address = Address::where('user_id', Auth::id())->findOrFail($id);
+        $address = Auth::user()
+            ->addresses()
+            ->where('id', $id)
+            ->firstOrFail();
+
         $address->delete();
-        return redirect()->route('address.index');
+
+        return back()->with('success', 'Alamat berhasil dihapus.');
     }
 }

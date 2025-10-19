@@ -5,7 +5,10 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Address;
+use App\Models\Transaction;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /*
  * Restore DB-backed cart behavior: prefer saved Order for authenticated users
@@ -179,7 +182,8 @@ class CartController extends Controller
         }
 
         // Finalize checkout: create Order + OrderItems for authenticated users.
-        $payload = session('buy_now.items', []);
+        $payloadWrapper = session('buy_now', []);
+        $payload = is_array($payloadWrapper) ? ($payloadWrapper['items'] ?? []) : [];
         if (empty($payload) || ! is_array($payload)) {
             return redirect('/cart')->with('error', 'Tidak ada produk untuk diproses.');
         }
@@ -189,34 +193,106 @@ class CartController extends Controller
             return redirect('/login')->with('warning', 'Silakan login dulu sebelum checkout');
         }
 
-        // create order
-        $total = 0;
-        foreach ($payload as $it) { $total += (isset($it['price']) ? floatval($it['price']) : 0) * (isset($it['quantity']) ? intval($it['quantity']) : 1); }
+        $userId = Auth::id();
 
-        $order = Order::create([
-            'user_id' => Auth::id(),
-            'total' => $total,
-            'status' => 'belum_dibayar',
+        $validated = $request->validate([
+            'payment_method' => ['required', 'in:transfer,cod'],
+            'address_id' => ['nullable', 'integer'],
+            'recipient_name' => ['nullable', 'string', 'required_without:address_id'],
+            'phone' => ['nullable', 'string', 'required_without:address_id'],
+            'address' => ['nullable', 'string', 'required_without:address_id'],
+        ], [
+            'payment_method.required' => 'Pilih metode pembayaran lebih dulu.',
+            'recipient_name.required_without' => 'Nama penerima wajib diisi bila memakai alamat baru.',
+            'phone.required_without' => 'Nomor telepon wajib diisi bila memakai alamat baru.',
+            'address.required_without' => 'Alamat lengkap wajib diisi bila memakai alamat baru.',
         ]);
 
-        // create order items
-        foreach ($payload as $it) {
-            $pid = $it['product_id'] ?? null;
-            $qty = isset($it['quantity']) ? intval($it['quantity']) : 1;
-            $price = isset($it['price']) ? floatval($it['price']) : 0;
-            if (! $pid) continue;
-            // ensure product exists (optional)
-            $product = Product::find($pid);
-            if (! $product) continue;
-            $order->items()->create([
-                'product_id' => $product->id,
-                'quantity' => $qty,
-                'price' => $price,
-            ]);
+        $existingAddress = null;
+        $newAddressData = null;
+        if (! empty($validated['address_id'])) {
+            $existingAddress = Address::where('user_id', $userId)
+                ->where('id', intval($validated['address_id']))
+                ->first();
+
+            if (! $existingAddress) {
+                return redirect()->back()->withErrors(['address_id' => 'Alamat tidak ditemukan.'])->withInput();
+            }
+        } else {
+            $newAddressData = [
+                'user_id' => $userId,
+                'recipient_name' => trim($validated['recipient_name'] ?? ''),
+                'phone' => trim($validated['phone'] ?? ''),
+                'address' => trim($validated['address'] ?? ''),
+            ];
         }
 
-        // cleanup session cart/buy_now
-        session()->forget('cart');
+        $total = 0;
+        foreach ($payload as $it) {
+            $price = isset($it['price']) ? floatval($it['price']) : 0;
+            $qty = isset($it['quantity']) ? intval($it['quantity']) : 1;
+            $total += $price * $qty;
+        }
+
+        DB::transaction(function () use ($payload, $total, $userId, $existingAddress, $newAddressData, $validated) {
+            $addressId = $existingAddress?->id;
+            if (! $addressId && is_array($newAddressData)) {
+                $addressId = Address::create($newAddressData)->id;
+            }
+
+            $order = Order::create([
+                'user_id' => $userId,
+                'address_id' => $addressId,
+                'total' => $total,
+                'status' => 'belum_dibayar',
+            ]);
+
+            foreach ($payload as $it) {
+                $pid = $it['product_id'] ?? null;
+                $qty = isset($it['quantity']) ? intval($it['quantity']) : 1;
+                $price = isset($it['price']) ? floatval($it['price']) : 0;
+                if (! $pid) {
+                    continue;
+                }
+
+                $product = Product::find($pid);
+                if (! $product) {
+                    continue;
+                }
+
+                $order->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => max(1, $qty),
+                    'price' => $price,
+                ]);
+            }
+
+            Transaction::create([
+                'order_id' => $order->id,
+                'payment_method' => $validated['payment_method'],
+                'status' => 'belum_dibayar',
+            ]);
+        });
+
+        // remove purchased products from cart session but keep remaining items intact
+        $cartItems = session('cart.items');
+        if (is_array($cartItems) && count($cartItems) > 0) {
+            $purchasedIds = [];
+            foreach ($payload as $it) {
+                if (isset($it['product_id'])) {
+                    $purchasedIds[] = intval($it['product_id']);
+                }
+            }
+
+            if (! empty($purchasedIds)) {
+                $remaining = array_values(array_filter($cartItems, function ($item) use ($purchasedIds) {
+                    $id = isset($item['product_id']) ? intval($item['product_id']) : null;
+                    return $id === null || ! in_array($id, $purchasedIds, true);
+                }));
+                session(['cart.items' => $remaining]);
+            }
+        }
+
         session()->forget('buy_now');
 
         return redirect('/orders')->with('success', 'Pesanan dibuat. Silakan lanjutkan pembayaran.');

@@ -61,6 +61,11 @@
                 <h3 class="text-lg font-semibold">Alamat</h3>
                 <a href="{{ route('address.create') }}" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-semibold py-1 px-3 rounded">Tambah</a>
             </div>
+            @if (session('success'))
+                <div class="mb-3 rounded border border-green-300 bg-green-50 text-green-800 text-sm px-3 py-2">
+                    {{ session('success') }}
+                </div>
+            @endif
                 <div class="space-y-4">
                     @if(isset($addresses) && $addresses->isNotEmpty())
                         <div class="max-h-72 overflow-auto space-y-3">

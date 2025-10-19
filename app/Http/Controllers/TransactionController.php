@@ -21,9 +21,15 @@ class TransactionController extends Controller
     // Menampilkan detail transaksi
     public function show($id)
     {
-        $transaction = Transaction::whereHas('order', function($q){
-            $q->where('user_id', Auth::id());
-        })->findOrFail($id);
+        $transaction = Transaction::with(['order.items.product','order.user','order.address'])
+            ->whereHas('order', function($q){
+                $q->where('user_id', Auth::id());
+            })->findOrFail($id);
+
+        // If AJAX/JSON requested, return JSON payload
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json($transaction);
+        }
 
         return view('transactions.show', compact('transaction'));
     }
@@ -53,8 +59,17 @@ class TransactionController extends Controller
         // Update order status to prepared (ready to be shipped)
         $order->update(['status' => 'disiapkan']);
 
-    // After payment, redirect user to the order detail page
-    return redirect('/orders/' . $order->id)->with('success', 'Pembayaran dicatat.');
+        // If AJAX request, return JSON
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran dicatat.',
+                'transaction' => $transaction
+            ]);
+        }
+
+        // After payment, redirect user to the order detail page
+        return redirect('/orders/' . $order->id)->with('success', 'Pembayaran dicatat.');
     }
 
     // Admin kirim pesanan
@@ -85,6 +100,14 @@ class TransactionController extends Controller
                 $order->update(['status' => 'selesai']);
                 $transaction->update(['status' => 'selesai']);
             }
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Status pesanan telah diperbarui',
+                'newStatus' => $transaction->refresh()->status
+            ]);
         }
 
         return redirect('/transactions/'.$id);

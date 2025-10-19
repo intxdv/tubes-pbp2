@@ -80,5 +80,8 @@
     <footer>
         &copy; {{ date('Y') }} Marketplace
     </footer>
+    
+    {{-- Render any pushed page scripts --}}
+    @stack('scripts')
 </body>
 </html>

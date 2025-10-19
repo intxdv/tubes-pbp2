@@ -22,12 +22,21 @@ class AuthController extends Controller
         $password = $request->input('password');
         $field = filter_var($loginInput, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
 
-        if (Auth::attempt([$field => $loginInput, 'password' => $password])) {
+        if (Auth::attempt([$field => $loginInput, 'password' => $password], $request->filled('remember'))) {
             $request->session()->regenerate();
+            
+            // Redirect admin to dashboard
             if (Auth::user()->role === 'admin') {
-                return redirect()->route('admin_dashboard');
+                return redirect()->route('admin.dashboard');
             }
-            return redirect('/');
+            
+            // If user was trying to access admin area, redirect to home
+            if ($request->is('admin/*')) {
+                return redirect('/');
+            }
+            
+            // For normal users, redirect to intended URL or home
+            return redirect()->intended('/');
         }
 
         return back()->withErrors([

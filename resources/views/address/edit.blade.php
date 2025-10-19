@@ -3,6 +3,16 @@
 <div class="min-h-[60vh] flex items-start md:items-center justify-center py-8 md:py-16">
     <div class="w-full max-w-xl bg-white rounded-lg shadow-md p-8">
         <h2 class="text-2xl font-semibold mb-6">Edit Alamat</h2>
+        @if ($errors->any())
+            <div class="mb-4 rounded-md bg-yellow-50 border border-yellow-300 text-yellow-900 px-4 py-3">
+                <p class="font-semibold mb-2">Periksa kembali data kamu:</p>
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
         <form method="POST" action="{{ route('address.update', $address->id) }}">
             @csrf
             @method('PATCH')

@@ -6,9 +6,19 @@ class AdminMiddleware
 {
     public function handle($request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->role === 'admin') {
-            return $next($request);
+        if (!Auth::check()) {
+            return redirect()->route('admin.login')
+                ->with('error', 'Silakan login terlebih dahulu.');
         }
-        abort(403);
+
+        if (Auth::user()->role !== 'admin') {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('admin.login')
+                ->with('error', 'Akses hanya untuk admin.');
+        }
+
+        return $next($request);
     }
 }

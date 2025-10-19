@@ -45,40 +45,66 @@
                 @endif
                 <h2 style="font-size:22px; font-weight:700; margin:0 0 18px 0;">Checkout</h2>
 
+                @if ($errors->any())
+                    <div style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; padding:12px 14px; border-radius:8px; margin-bottom:18px;">
+                        <div style="font-weight:700; margin-bottom:6px;">Periksa kembali data kamu:</div>
+                        <ul style="margin:0; padding-left:18px;">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
                 <form id="checkout-form" method="POST" action="/cart/checkout">
                     @csrf
 
                     <div style="margin-bottom:14px;">
                         <label style="display:block; font-size:13px; color:#333; margin-bottom:6px;">Pilih Alamat</label>
-                        <select id="address_select" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
-                            <option value="">-- Tambah alamat baru --</option>
+                        <select id="address_select" name="address_id" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <option value="" {{ old('address_id') ? '' : 'selected' }}>-- Tambah alamat baru --</option>
                             @foreach((Auth::user() && method_exists(Auth::user(), 'addresses') ? Auth::user()->addresses : []) as $addr)
-                                <option value="{{ $addr->id }}">{{ $addr->label ?? 'Alamat' }} — {{ strlen($addr->address) > 60 ? substr($addr->address,0,57).'...' : $addr->address }}</option>
+                                <option value="{{ $addr->id }}" {{ intval(old('address_id')) === $addr->id ? 'selected' : '' }}>{{ $addr->label ?? 'Alamat' }} — {{ strlen($addr->address) > 60 ? substr($addr->address,0,57).'...' : $addr->address }}</option>
                             @endforeach
                         </select>
+                        @error('address_id')
+                            <div style="color:#b91c1c; font-size:0.85rem; margin-top:6px;">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div id="new-address-form" style="display:block; padding:12px; border:1px solid #eee; border-radius:6px; margin-bottom:12px;">
                         <div style="margin-bottom:10px;">
                             <label style="display:block; font-size:13px; color:#333; margin-bottom:6px;">Nama penerima</label>
-                            <input type="text" name="recipient_name" id="recipient_name" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <input type="text" name="recipient_name" id="recipient_name" value="{{ old('recipient_name') }}" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;" required>
+                            @error('recipient_name')
+                                <div style="color:#b91c1c; font-size:0.85rem; margin-top:6px;">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div style="margin-bottom:10px;">
                             <label style="display:block; font-size:13px; color:#333; margin-bottom:6px;">Nomor telepon</label>
-                            <input type="text" name="phone" id="phone" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <input type="text" name="phone" id="phone" value="{{ old('phone') }}" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;" required>
+                            @error('phone')
+                                <div style="color:#b91c1c; font-size:0.85rem; margin-top:6px;">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div>
                             <label style="display:block; font-size:13px; color:#333; margin-bottom:6px;">Alamat lengkap</label>
-                            <textarea name="address" id="address" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;" rows="3"></textarea>
+                            <textarea name="address" id="address" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;" rows="3" required>{{ old('address') }}</textarea>
+                            @error('address')
+                                <div style="color:#b91c1c; font-size:0.85rem; margin-top:6px;">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
 
                     <div style="margin-bottom:12px;">
                         <label style="display:block; font-size:13px; color:#333; margin-bottom:6px;">Metode Pembayaran</label>
                         <select id="payment_method" name="payment_method" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
-                            <option value="transfer">Transfer Bank</option>
-                            <option value="cod">Cash on Delivery</option>
+                            <option value="transfer" {{ old('payment_method', 'transfer') === 'transfer' ? 'selected' : '' }}>Transfer Bank</option>
+                            <option value="cod" {{ old('payment_method') === 'cod' ? 'selected' : '' }}>Cash on Delivery</option>
                         </select>
+                        @error('payment_method')
+                            <div style="color:#b91c1c; font-size:0.85rem; margin-top:6px;">{{ $message }}</div>
+                        @enderror
                     </div>
 
 
@@ -126,18 +152,31 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-    const paymentSelect = document.getElementById('payment_method');
     const addressSelect = document.getElementById('address_select');
     const newAddressForm = document.getElementById('new-address-form');
+    const addressFields = ['recipient_name','phone','address'].map(id => document.getElementById(id));
 
     // Address selection toggles new-address form
-    addressSelect.addEventListener('change', function(){
-        if (this.value) {
-            newAddressForm.style.display = 'none';
-        } else {
-            newAddressForm.style.display = 'block';
+    function syncAddressForm(){
+        if (! addressSelect) {
+            return;
         }
-    });
+        const useExisting = addressSelect.value !== '';
+        if (newAddressForm) {
+            newAddressForm.style.display = useExisting ? 'none' : 'block';
+        }
+        addressFields.forEach(function(field){
+            if (field) {
+                field.required = ! useExisting;
+            }
+        });
+    }
+
+    if (addressSelect) {
+        addressSelect.addEventListener('change', syncAddressForm);
+    }
+
+    syncAddressForm();
 
     // Quantity display / total calc (read-only in checkout)
     function recalcTotals() {

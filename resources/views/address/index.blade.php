@@ -9,6 +9,12 @@
         </div>
     </div>
 
+    @if (session('success'))
+        <div class="mb-4 rounded-md bg-green-50 border border-green-300 text-green-900 px-4 py-3">
+            {{ session('success') }}
+        </div>
+    @endif
+
     <div class="space-y-4">
         @forelse($addresses as $address)
             <div class="bg-white rounded-lg shadow-sm p-4">

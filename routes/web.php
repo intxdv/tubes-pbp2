@@ -13,11 +13,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AddressController;
 
-// Home / Products
+// Public routes
 Route::get('/search', [ProductController::class, 'search'])->name('products.search');
 Route::get('/', [ProductController::class, 'index']);
 Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{id}', [ProductController::class, 'show']);
+    Route::get('/products/{id}', [ProductController::class, 'show']);
 
 // Product management (some apps only allow admin)
 Route::get('/products/{id}/edit', [ProductController::class, 'edit']);
@@ -73,13 +73,42 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/address/{id}', [AddressController::class, 'destroy'])->name('address.destroy');
 });
 
-// Admin area
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('/admin/admin_dashboard', [AdminController::class, 'admin_dashboard']);
-    Route::get('/admin/transactions', [AdminController::class, 'transactions']);
-    Route::get('/admin/categories', [AdminController::class, 'categories']);
-    Route::post('/admin/categories', [AdminController::class, 'addCategory']);
-    Route::delete('/admin/categories/{id}', [AdminController::class, 'deleteCategory']);
-});
+// Admin routes
+Route::prefix('admin')->group(function () {
+    // Public admin routes
+    Route::middleware('guest')->group(function() {
+        Route::get('/login', [AdminController::class, 'loginPage'])->name('admin.login');
+        Route::post('/login', [AdminController::class, 'login'])->name('admin.login.post');
+    });
+    
+    // Protected admin routes that require auth and admin role
+    Route::middleware(['auth', 'admin'])->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/products', [AdminController::class, 'products'])->name('admin.products');
+        Route::get('/transactions', [AdminController::class, 'transactions'])->name('admin.transactions');
+        Route::get('/statistics', [AdminController::class, 'statistics'])->name('admin.statistics');
+        Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout');
+        
+        // Categories management
+        Route::get('/categories', [AdminController::class, 'categories'])->name('admin.categories');
+        Route::post('/categories', [AdminController::class, 'addCategory'])->name('admin.categories.add');
+        Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
+        
+        // Products management
+        Route::post('/products', [AdminController::class, 'addProduct'])->name('admin.products.add');
+        Route::get('/products/{id}', [AdminController::class, 'getProduct'])->name('admin.products.get');
+        Route::put('/products/{id}', [AdminController::class, 'updateProduct'])->name('admin.products.update');
+        Route::delete('/products/{id}', [AdminController::class, 'deleteProduct'])->name('admin.products.delete');
+        
+        // Transaction management 
+        Route::get('/transactions/{id}', [AdminController::class, 'getTransaction'])->name('admin.transactions.get');
+        Route::post('/transactions/{id}/status', [AdminController::class, 'updateTransactionStatus'])->name('admin.transactions.updateStatus');
+        
+                // Statistics API
+        Route::get('/api/statistics/summary', [AdminController::class, 'getStatisticsSummary']);
+        Route::get('/api/statistics/revenue-chart', [AdminController::class, 'getRevenueChart']);
+        Route::get('/api/statistics/category-chart', [AdminController::class, 'getCategoryChart']);
+    });
+}); // End admin routes
 
 
