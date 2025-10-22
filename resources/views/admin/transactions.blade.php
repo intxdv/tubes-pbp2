@@ -51,25 +51,7 @@
 
         <div class="form-actions mt-6">
             <button type="button" onclick="hideTransactionModal()" class="btn-secondary">Tutup</button>
-            <button type="button" id="transactionActionBtn" class="btn-primary" style="display:none;">Aksi Admin</button>
         </div>
-    </div>
-</div>
-
-<div id="addCategoryModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h3>Tambah Kategori</h3>
-        <form action="{{ route('admin.categories.add') }}" method="POST">
-            @csrf
-            <div class="form-group">
-                <label for="category-name">Nama Kategori</label>
-                <input type="text" id="category-name" name="name" required>
-            </div>
-            <div class="form-actions">
-                <button type="button" onclick="hideAddCategoryModal()" class="btn-secondary">Batal</button>
-                <button type="submit" class="btn-primary">Simpan</button>
-            </div>
-        </form>
     </div>
 </div>
 
