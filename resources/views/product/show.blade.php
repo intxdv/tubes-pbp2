@@ -2,7 +2,7 @@
 
 @section('content')
     <div style="max-width:600px; margin:auto; border:1px solid #eee; border-radius:8px; padding:24px;">
-       <img src="{{ $product->image ? asset('images/' . $product->image) : 'https://via.placeholder.com/200' }}" 
+       <img src="{{ $product->image ? asset('images/' . rawurlencode($product->image)) : 'https://via.placeholder.com/200' }}" 
            alt="{{ $product->name }}" style="width:100%; height:250px; object-fit:cover; border-radius:8px; margin-bottom:16px;">
         <h2 style="margin:16px 0 8px 0;">{{ $product->name }}</h2>
         <p><b>Rp {{ number_format($product->price, 0, ',', '.') }}</b></p>
@@ -76,42 +76,60 @@
             @endauth
         </div>
         <hr style="margin:24px 0;">
-        <h4>Review Produk</h4>
+        <h4 style="font-size:20px; font-weight:600; margin-bottom:16px;">Review Produk</h4>
         @php
-            $avg = $product->reviews->avg('rating');
-            $count = $product->reviews->count();
+            $reviews = $product->reviews;
+            $count = $reviews->count();
+            $avg = $count > 0 ? $reviews->avg('rating') : 0;
             $rounded = $avg ? (int) round($avg) : 0;
         @endphp
+        
         @if($count === 0)
-            <p style="font-size:14px; color:#555;">Belum ada review</p>
+            <p style="font-size:14px; color:#888; margin-bottom:16px;">Belum ada review untuk produk ini</p>
         @else
-            <p style="font-size:14px; color:#555; display:flex; align-items:center; gap:8px;">
-                <span>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding:12px; background:#f9fafb; border-radius:8px;">
+                <div style="display:flex; align-items:center; gap:4px;">
                     @for($i = 1; $i <= 5; $i++)
                         @if($i <= $rounded)
-                            <span style="color:#f59e0b; font-size:16px;">★</span>
+                            <span style="color:#f59e0b; font-size:20px;">★</span>
                         @else
-                            <span style="color:#ddd; font-size:16px;">★</span>
+                            <span style="color:#ddd; font-size:20px;">★</span>
                         @endif
                     @endfor
-                </span>
-                <span style="color:#555;">({{ $count }})</span>
-            </p>
+                </div>
+                <span style="font-size:18px; font-weight:600; color:#1f2937;">{{ number_format($avg, 1) }}</span>
+                <span style="font-size:14px; color:#6b7280;">({{ $count }} review{{ $count > 1 ? 's' : '' }})</span>
+            </div>
         @endif
-        <div style="margin-top:16px;">
-            @foreach($product->reviews as $review)
-                <div style="border-bottom:1px solid #eee; padding:8px 0;">
-                    <b>{{ $review->user->name }}</b> - Rating: {{ $review->rating }}<br>
-                    <span style="font-size:13px; color:#555;">{{ $review->comment }}</span>
-                    @auth
-                        @if($review->user_id === auth()->id())
-                            <form method="POST" action="/reviews/{{ $review->id }}" style="display:inline; margin-left:8px;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" style="background:#ef4444; color:white; border:none; padding:2px 8px; border-radius:4px; font-size:12px;">Hapus</button>
-                            </form>
-                        @endif
-                    @endauth
+        
+        <div style="margin-top:16px; max-height:500px; overflow-y:auto;">
+            @foreach($reviews as $review)
+                <div style="border-bottom:1px solid #e5e7eb; padding:16px 0;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <div>
+                            <b style="color:#1f2937;">{{ $review->user->name }}</b>
+                            <div style="display:flex; gap:2px; margin-top:4px;">
+                                @for($i = 1; $i <= 5; $i++)
+                                    @if($i <= $review->rating)
+                                        <span style="color:#f59e0b; font-size:14px;">★</span>
+                                    @else
+                                        <span style="color:#ddd; font-size:14px;">★</span>
+                                    @endif
+                                @endfor
+                            </div>
+                        </div>
+                        @auth
+                            @if($review->user_id === auth()->id())
+                                <form method="POST" action="/reviews/{{ $review->id }}" style="display:inline;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" onclick="return confirm('Hapus review ini?')" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; font-size:12px; cursor:pointer;">Hapus</button>
+                                </form>
+                            @endif
+                        @endauth
+                    </div>
+                    <p style="font-size:14px; color:#374151; line-height:1.6;">{{ $review->comment }}</p>
+                    <p style="font-size:12px; color:#9ca3af; margin-top:6px;">{{ $review->created_at->diffForHumans() }}</p>
                 </div>
             @endforeach
         </div>

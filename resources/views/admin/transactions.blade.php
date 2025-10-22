@@ -31,7 +31,7 @@
                     </span>
                 </td>
                 <td>
-                    <button class="btn-action btn-edit" onclick="showTransactionDetail({{ $transaction->id }})">Detail</button>
+                    <button class="btn-action btn-edit" onclick="showTransactionModal({{ $transaction->id }})">Detail</button>
                 </td>
             </tr>
             @endforeach
@@ -40,18 +40,36 @@
 </div>
 
 <!-- Modal Transaction Detail -->
+{{-- unified modal (styled like add-category modal) for transaction details --}}
 <div id="transactionModal" class="modal" style="display: none;">
     <div class="modal-content max-w-2xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">Detail Transaksi</h3>
-            <button onclick="hideTransactionModal()" class="text-gray-500 hover:text-gray-700">&times;</button>
-        </div>
+        <h3 id="transactionModalTitle">Detail Transaksi</h3>
+
         <div id="transactionDetail" class="space-y-4">
-            <!-- Will be filled by JavaScript -->
+            <!-- populated by JS: sections for info, buyer, items -->
         </div>
-        <div class="mt-6 flex justify-end">
+
+        <div class="form-actions mt-6">
             <button type="button" onclick="hideTransactionModal()" class="btn-secondary">Tutup</button>
+            <button type="button" id="transactionActionBtn" class="btn-primary" style="display:none;">Aksi Admin</button>
         </div>
+    </div>
+</div>
+
+<div id="addCategoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3>Tambah Kategori</h3>
+        <form action="{{ route('admin.categories.add') }}" method="POST">
+            @csrf
+            <div class="form-group">
+                <label for="category-name">Nama Kategori</label>
+                <input type="text" id="category-name" name="name" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="hideAddCategoryModal()" class="btn-secondary">Batal</button>
+                <button type="submit" class="btn-primary">Simpan</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -63,6 +81,46 @@
 .detail-item{padding:10px;background:#f8fafc;border-radius:6px}
 .form-actions{display:flex;justify-content:flex-end;margin-top:20px}
 .btn-secondary{padding:8px 16px;background:#e5e7eb;color:#4b5563;border:none;border-radius:6px;cursor:pointer}
+
+/* modal styles (copied from products view) */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+}
+
+.modal-content h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.btn-primary {
+    padding: 8px 16px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #1e40af;
+}
 </style>
 
 @endsection
@@ -72,24 +130,67 @@
 function numberFormat(number){return new Intl.NumberFormat('id-ID').format(number)}
 function formatDate(dateString){return new Date(dateString).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}
 
-async function showTransactionDetail(transactionId){
-    const modal=document.getElementById('transactionModal');
-    const detailContainer=document.getElementById('transactionDetail');
-    modal.style.display='flex';
-    detailContainer.innerHTML='<p>Loading...</p>';
-    try{
-        const res=await fetch(`/admin/transactions/${transactionId}`);
-        if(!res.ok)throw new Error('Failed to fetch');
-        const t=await res.json();
-        const order=t.order;
-        const itemsHtml=order.items.map(i=>`<tr><td>${i.product.name}</td><td>${i.quantity}</td><td>Rp ${numberFormat(i.price)}</td><td>Rp ${numberFormat(i.price*i.quantity)}</td></tr>`).join('');
-        let actionHtml='';
-        if(t.status==='disiapkan'){
-            actionHtml=`<button class="btn-primary" onclick="updateStatus(${t.id})">Kirim Pesanan</button>`;
-        }
-        detailContainer.innerHTML=`<div class="detail-section"><h4>Informasi Transaksi</h4><div class="detail-grid"><div class="detail-item"><p>No. Order</p><p>${order.order_number}</p></div><div class="detail-item"><p>Tanggal</p><p>${formatDate(t.created_at)}</p></div><div class="detail-item"><p>Status</p><p>${t.status}</p></div><div class="detail-item"><p>Total</p><p>Rp ${numberFormat(t.amount)}</p></div></div><div class="form-actions">${actionHtml}</div></div><div class="detail-section"><h4>Informasi Pembeli</h4><div class="detail-grid"><div class="detail-item"><p>Nama</p><p>${order.user.name}</p></div><div class="detail-item"><p>Email</p><p>${order.user.email}</p></div></div></div><div class="detail-section"><h4>Daftar Produk</h4><table class="items-table"><thead><tr><th>Produk</th><th>Harga</th><th>Qty</th><th>Total</th></tr></thead><tbody>${itemsHtml}</tbody></table></div>`;
-    }catch(err){detailContainer.innerHTML='<p class="text-red-500">Gagal memuat detail transaksi</p>';console.error(err)}
+// show transaction modal (similar pattern to product edit modal)
+function showTransactionModal(transactionId) {
+    const modal = document.getElementById('transactionModal');
+    const title = document.getElementById('transactionModalTitle');
+    const detailContainer = document.getElementById('transactionDetail');
+    const actionBtn = document.getElementById('transactionActionBtn');
+
+    title.textContent = 'Detail Transaksi #' + transactionId;
+    detailContainer.innerHTML = '<p>Loading...</p>';
+    actionBtn.style.display = 'none';
+    modal.style.display = 'flex';
+
+    fetch(`/admin/transactions/${transactionId}`)
+        .then(res => { if(!res.ok) throw new Error('Failed to fetch'); return res.json() })
+        .then(t => {
+            const order = t.order;
+            const itemsHtml = order.items.map(i => `<tr><td>${i.product.name}</td><td>${i.quantity}</td><td>Rp ${numberFormat(i.price)}</td><td>Rp ${numberFormat(i.price*i.quantity)}</td></tr>`).join('');
+            let adminAction = '';
+            if (t.status === 'disiapkan') {
+                adminAction = `<button class="btn-primary" onclick="updateStatus(${t.id})">Kirim Pesanan</button>`;
+                // also show primary action button
+                actionBtn.style.display = 'inline-block';
+                actionBtn.textContent = 'Kirim Pesanan';
+                actionBtn.onclick = function(){ updateStatus(t.id) };
+            } else {
+                actionBtn.style.display = 'none';
+            }
+
+            detailContainer.innerHTML = `
+                <div class="detail-section">
+                    <h4>Informasi Transaksi</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item"><p>No. Order</p><p>${order.order_number}</p></div>
+                        <div class="detail-item"><p>Tanggal</p><p>${formatDate(t.created_at)}</p></div>
+                        <div class="detail-item"><p>Status</p><p>${t.status}</p></div>
+                        <div class="detail-item"><p>Total</p><p>Rp ${numberFormat(t.amount)}</p></div>
+                    </div>
+                    <div class="form-actions">${adminAction}</div>
+                </div>
+                <div class="detail-section">
+                    <h4>Informasi Pembeli</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item"><p>Nama</p><p>${order.user.name}</p></div>
+                        <div class="detail-item"><p>Email</p><p>${order.user.email}</p></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h4>Daftar Produk</h4>
+                    <table class="items-table">
+                        <thead><tr><th>Produk</th><th>Harga</th><th>Qty</th><th>Total</th></tr></thead>
+                        <tbody>${itemsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+        })
+        .catch(err => {
+            detailContainer.innerHTML = '<p class="text-red-500">Gagal memuat detail transaksi</p>';
+            console.error(err);
+        });
 }
+
 function hideTransactionModal(){document.getElementById('transactionModal').style.display='none'}
 function updateStatus(transactionId){if(!confirm('Apakah Anda yakin ingin mengirim pesanan ini?'))return;fetch(`/admin/transactions/${transactionId}/status`,{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').getAttribute('content'),'Accept':'application/json'}}).then(r=>r.json()).then(data=>{if(data.success){alert(data.message);window.location.reload()}else{alert(data.message||'Gagal mengubah status')}}).catch(e=>{console.error(e);alert('Terjadi kesalahan')})}
 window.addEventListener('click',function(e){const modal=document.getElementById('transactionModal');if(e.target===modal)modal.style.display='none'})

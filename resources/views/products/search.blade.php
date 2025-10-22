@@ -95,7 +95,7 @@
                 @foreach($products as $product)
                     @php
                         $imgSrc = $product->image
-                            ? asset('storage/'.$product->image)
+                            ? asset('images/' . rawurlencode($product->image))
                             : 'https://images.unsplash.com/photo-1512499617640-c2f999098c01?auto=format&fit=crop&w=1000&q=80';
                         $avg = $product->reviews()->exists() ? round($product->reviews()->avg('rating'),1) : null;
                         $rCount = $product->reviews()->count();

@@ -7,7 +7,7 @@ class AdminMiddleware
     public function handle($request, Closure $next)
     {
         if (!Auth::check()) {
-            return redirect()->route('admin.login')
+            return redirect()->route('login')
                 ->with('error', 'Silakan login terlebih dahulu.');
         }
 
@@ -15,7 +15,7 @@ class AdminMiddleware
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            return redirect()->route('admin.login')
+            return redirect()->route('login')
                 ->with('error', 'Akses hanya untuk admin.');
         }
 

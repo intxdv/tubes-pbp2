@@ -14,6 +14,16 @@ class Product extends Model
         'image',
         'category_id',
     ];
+
+    // Accessor untuk URL gambar
+    public function getImageUrlAttribute()
+    {
+        if ($this->image) {
+            return asset('images/' . $this->image);
+        }
+        return asset('images/product-default.png');
+    }
+
     // Relasi ke kategori
     public function category()
     {

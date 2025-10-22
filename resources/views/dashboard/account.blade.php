@@ -116,7 +116,13 @@
                         @foreach($orders as $order)
                             @php $first = $order->items->first(); $count = $order->items->count(); $qty = $order->items->sum('quantity'); @endphp
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $first->product->name }}@if($count>1) +{{ $count-1 }} more @endif</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    @if($first && $first->product)
+                                        {{ $first->product->name }}@if($count>1) +{{ $count-1 }} more @endif
+                                    @else
+                                        <em>Produk tidak tersedia</em>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $qty }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Rp {{ number_format($order->total,0,',','.') }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">{{ ucfirst($order->status) }}</td>

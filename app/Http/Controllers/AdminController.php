@@ -49,7 +49,7 @@ class AdminController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('admin.login');
+        return redirect()->route('login');
     }
     // Dashboard admin
     public function dashboard()
@@ -190,7 +190,10 @@ class AdminController extends Controller
 
         $data = $request->only(['name','price','stock','category_id']);
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('images'), $imageName);
+            $data['image'] = $imageName;
         }
 
         $product = Product::create($data);
@@ -227,7 +230,10 @@ class AdminController extends Controller
 
         $data = $request->except('image');
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('images'), $imageName);
+            $data['image'] = $imageName;
         }
 
         $product->update($data);
@@ -304,6 +310,16 @@ class AdminController extends Controller
         if ($currentStatus === 'disiapkan') {
             $transaction->status = 'dikirim';
             $transaction->save();
+
+            // Also update related order status so user dashboard reflects 'dikirim' (OTW)
+            try {
+                if ($transaction->order) {
+                    $transaction->order->update(['status' => 'dikirim']);
+                }
+            } catch (\Exception $e) {
+                // Log but don't fail the whole request
+                Log::error('Failed to update order status when admin marked transaction dikirim: ' . $e->getMessage());
+            }
             
             return response()->json([
                 'success' => true,

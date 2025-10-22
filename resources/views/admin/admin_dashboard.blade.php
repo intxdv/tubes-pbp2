@@ -27,7 +27,7 @@
     <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:24px; margin-bottom:24px;">
         @foreach($products as $product)
             <div style="background:white; border-radius:12px; box-shadow:0 2px 8px #0002; padding:18px; display:flex; flex-direction:column; align-items:center; border:1px solid #f3f4f6;">
-                <img src="{{ $product->image ? asset('storage/' . $product->image) : 'https://via.placeholder.com/120' }}" alt="{{ $product->name }}" style="width:100%; height:100px; object-fit:cover; border-radius:8px; margin-bottom:8px;">
+                <img src="{{ $product->image ? asset('images/' . rawurlencode($product->image)) : 'https://via.placeholder.com/120' }}" alt="{{ $product->name }}" style="width:100%; height:100px; object-fit:cover; border-radius:8px; margin-bottom:8px;">
                 <div style="font-weight:600; color:#2563eb; margin-bottom:4px; text-align:center;">{{ $product->name }}</div>
                 <div style="font-size:0.95rem; color:#222; margin-bottom:4px;">Rp {{ number_format($product->price, 0, ',', '.') }}</div>
                 <div style="font-size:0.9rem; color:#555; margin-bottom:8px;">Stock: {{ $product->stock }}</div>

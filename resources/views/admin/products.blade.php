@@ -6,7 +6,6 @@
 <!-- Notification -->
 <div id="notification" class="hidden fixed top-4 right-4 px-4 py-2 rounded shadow-lg" role="alert">
     <span id="notification-message"></span>
-    <button onclick="hideNotification()" class="ml-4 text-gray-500 hover:text-gray-700">&times;</button>
 </div>
 
 <h1 class="page-title">Manajemen Produk</h1>
@@ -66,9 +65,9 @@
             @foreach($products as $product)
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-2 border-b">
-                    @if($product->image && Storage::disk('public')->exists($product->image))
+                    @if($product->image)
                         <div class="w-16 h-16">
-                            <img src="{{ asset('storage/' . $product->image) }}" 
+                            <img src="{{ asset('images/' . rawurlencode($product->image)) }}" 
                                  alt="{{ $product->name }}" 
                                  class="w-full h-full object-cover rounded">
                         </div>
@@ -292,7 +291,7 @@ function showEditProductModal(productId) {
             document.getElementById('product-stock').value = product.stock || 0;
             const preview = document.getElementById('preview-image');
             if (product.image) {
-                preview.src = '/storage/' + product.image;
+                preview.src = '/images/' + product.image;
                 preview.style.display = 'block';
             } else {
                 preview.style.display = 'none';

@@ -27,6 +27,7 @@
                     <div class="space-y-4">
                         @foreach($orders as $order)
                             @php $first = $order->items->first(); $count = $order->items->count(); @endphp
+                            @if($first && $first->product)
                             <div class="flex items-center justify-between border rounded p-4">
                                 <div class="flex items-center gap-4">
                                     <img src="{{ $first->product->image_url ?? '/images/product-default.png' }}" class="w-20 h-20 object-cover rounded">
@@ -40,6 +41,7 @@
                                     <div class="mt-2"><a href="/orders/{{ $order->id }}" class="bg-gray-200 text-gray-800 px-3 py-1 rounded">Detail</a></div>
                                 </div>
                             </div>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -53,6 +55,7 @@
                     <div class="space-y-4">
                         @foreach($filtered as $order)
                             @php $first = $order->items->first(); $count = $order->items->count(); @endphp
+                            @if($first && $first->product)
                             <div class="flex items-center justify-between border rounded p-4">
                                 <div class="flex items-center gap-4">
                                     <img src="{{ $first->product->image_url ?? '/images/product-default.png' }}" class="w-20 h-20 object-cover rounded">
@@ -66,6 +69,7 @@
                                     <div class="mt-2"><a href="/orders/{{ $order->id }}" class="bg-gray-200 text-gray-800 px-3 py-1 rounded">Bayar</a></div>
                                 </div>
                             </div>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -79,6 +83,7 @@
                     <div class="space-y-4">
                         @foreach($filtered as $order)
                             @php $first = $order->items->first(); $count = $order->items->count(); @endphp
+                            @if($first && $first->product)
                             <div class="flex items-center justify-between border rounded p-4">
                                 <div class="flex items-center gap-4">
                                     <img src="{{ $first->product->image_url ?? '/images/product-default.png' }}" class="w-20 h-20 object-cover rounded">
@@ -92,6 +97,7 @@
                                     <div class="mt-2"><a href="/orders/{{ $order->id }}" class="bg-gray-200 text-gray-800 px-3 py-1 rounded">Detail</a></div>
                                 </div>
                             </div>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -105,6 +111,7 @@
                     <div class="space-y-4">
                         @foreach($filtered as $order)
                             @php $first = $order->items->first(); $count = $order->items->count(); @endphp
+                            @if($first && $first->product)
                             <div class="flex items-center justify-between border rounded p-4">
                                 <div class="flex items-center gap-4">
                                     <img src="{{ $first->product->image_url ?? '/images/product-default.png' }}" class="w-20 h-20 object-cover rounded">
@@ -118,6 +125,7 @@
                                     <div class="mt-2"><a href="/orders/{{ $order->id }}" class="bg-gray-200 text-gray-800 px-3 py-1 rounded">Detail</a></div>
                                 </div>
                             </div>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -131,6 +139,7 @@
                     <div class="space-y-4">
                         @foreach($filtered as $order)
                             @php $first = $order->items->first(); $count = $order->items->count(); @endphp
+                            @if($first && $first->product)
                             <div class="flex items-center justify-between border rounded p-4">
                                 <div class="flex items-center gap-4">
                                     <img src="{{ $first->product->image_url ?? '/images/product-default.png' }}" class="w-20 h-20 object-cover rounded">
@@ -143,6 +152,7 @@
                                     <button id="open-review-modal-{{ $order->id }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Beri Rating & Review</button>
                                 </div>
                             </div>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -173,25 +183,35 @@
 
 <!-- end orders -->
 
-@push('scripts')
 <script>
 function csrf(){const m=document.querySelector('meta[name="csrf-token"]');return m?m.getAttribute('content'):''}
 
 document.addEventListener('click', function(e){
     if(e.target && e.target.id && e.target.id.startsWith('open-review-modal-')){
+        e.preventDefault();
         const id = e.target.id.replace('open-review-modal-','');
+        console.log('Opening review modal for order:', id);
         openOrderReviewModal(id);
     }
 });
 
 async function openOrderReviewModal(orderId){
-    // fetch order details
+    console.log('Fetching order:', orderId);
     try{
-        const res = await fetch(`/orders/${orderId}`, { headers: { 'Accept': 'application/json' } });
+        const res = await fetch(`/orders/${orderId}`, { 
+            headers: { 
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            } 
+        });
         if(!res.ok) throw new Error('Failed to load order');
         const order = await res.json();
+        console.log('Order loaded:', order);
         showOrderReviewModal(order);
-    }catch(e){console.error(e); alert('Gagal memuat detail pesanan untuk review');}
+    }catch(e){
+        console.error('Error loading order:', e);
+        alert('Gagal memuat detail pesanan untuk review. Error: ' + e.message);
+    }
 }
 
 function showOrderReviewModal(order){
@@ -252,6 +272,7 @@ function openProductReviewFormFromOrder(productId, orderId){
         <div class="mb-6">
             <h3 class="text-xl font-bold mb-4">Review Produk</h3>
             <form id="singleReviewFormOrder" class="space-y-4">
+                <input type="hidden" id="review_order_id_order" value="${orderId}">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Rating:</label>
                     <select id="review_rating_order" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -279,6 +300,7 @@ async function submitReviewForProductFromOrder(productId){
     const submitBtn = form.querySelector('button[type="button"]');
     const rating = document.getElementById('review_rating_order').value;
     const comment = document.getElementById('review_comment_order').value;
+    const orderId = document.getElementById('review_order_id_order').value;
     
     if(!rating || !comment.trim()) {
         alert('Rating dan komentar harus diisi');
@@ -296,14 +318,15 @@ async function submitReviewForProductFromOrder(productId){
                 'Accept':'application/json',
                 'X-CSRF-TOKEN':csrf()
             },
-            body:JSON.stringify({rating:rating,comment:comment})
+            body:JSON.stringify({rating:rating,comment:comment,order_id:orderId})
         });
         
         const data = await res.json();
         
         if(res.ok && data.success){
             alert('Review berhasil dikirim!');
-            window.location.href = `/products/${productId}`;
+            closeOrderReviewModal();
+            window.location.reload();
         } else {
             alert(data?.message || 'Gagal mengirim review. Silakan coba lagi.');
             submitBtn.disabled = false;
@@ -317,4 +340,3 @@ async function submitReviewForProductFromOrder(productId){
     }
 }
 </script>
-@endpush

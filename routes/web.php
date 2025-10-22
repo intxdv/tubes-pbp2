@@ -17,7 +17,7 @@ use App\Http\Controllers\AddressController;
 Route::get('/search', [ProductController::class, 'search'])->name('products.search');
 Route::get('/', [ProductController::class, 'index']);
 Route::get('/products', [ProductController::class, 'index']);
-    Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
 
 // Product management (some apps only allow admin)
 Route::get('/products/{id}/edit', [ProductController::class, 'edit']);
@@ -46,16 +46,18 @@ Route::post('/cart/buy-now/{productId}', [CartController::class, 'buyNow']);
 Route::get('/cart/checkout', [CartController::class, 'showCheckout']);
 Route::post('/cart/checkout', [CartController::class, 'checkout']);
 
-// Orders / Transactions
-Route::get('/orders', [OrderController::class, 'index']);
-Route::get('/orders/{id}', [OrderController::class, 'show']);
-Route::patch('/orders/cancel/{id}', [OrderController::class, 'cancel']);
+// Orders / Transactions (protected)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::patch('/orders/cancel/{id}', [OrderController::class, 'cancel']);
 
-Route::get('/transactions', [TransactionController::class, 'index']);
-Route::get('/transactions/{id}', [TransactionController::class, 'show']);
-Route::post('/transactions/pay/{orderId}', [TransactionController::class, 'pay']);
-Route::post('/transactions/ship/{id}', [TransactionController::class, 'ship']);
-Route::post('/transactions/confirm/{id}', [TransactionController::class, 'confirm']);
+    Route::get('/transactions', [TransactionController::class, 'index']);
+    Route::get('/transactions/{id}', [TransactionController::class, 'show']);
+    Route::post('/transactions/pay/{orderId}', [TransactionController::class, 'pay']);
+    Route::post('/transactions/ship/{id}', [TransactionController::class, 'ship']);
+    Route::post('/transactions/confirm/{id}', [TransactionController::class, 'confirm']);
+});
 
 // Dashboard / Address (protected)
 Route::middleware(['auth'])->group(function () {
@@ -75,12 +77,6 @@ Route::middleware(['auth'])->group(function () {
 
 // Admin routes
 Route::prefix('admin')->group(function () {
-    // Public admin routes
-    Route::middleware('guest')->group(function() {
-        Route::get('/login', [AdminController::class, 'loginPage'])->name('admin.login');
-        Route::post('/login', [AdminController::class, 'login'])->name('admin.login.post');
-    });
-    
     // Protected admin routes that require auth and admin role
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
@@ -104,7 +100,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/transactions/{id}', [AdminController::class, 'getTransaction'])->name('admin.transactions.get');
         Route::post('/transactions/{id}/status', [AdminController::class, 'updateTransactionStatus'])->name('admin.transactions.updateStatus');
         
-                // Statistics API
+        // Statistics API
         Route::get('/api/statistics/summary', [AdminController::class, 'getStatisticsSummary']);
         Route::get('/api/statistics/revenue-chart', [AdminController::class, 'getRevenueChart']);
         Route::get('/api/statistics/category-chart', [AdminController::class, 'getCategoryChart']);

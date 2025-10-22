@@ -393,7 +393,7 @@
     <!-- SIDEBAR -->
     <div class="sidebar">
         <div class="sidebar-header">
-            <h2>MARKET X</h2>
+            <h2>MarketX</h2>
         </div>
         <div class="sidebar-menu">
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>

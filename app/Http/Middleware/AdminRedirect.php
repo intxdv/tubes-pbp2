@@ -17,23 +17,23 @@ class AdminRedirect
      */
     public function handle(Request $request, Closure $next)
     {
-        // Jika mengakses rute admin
-        if ($request->is('admin/*')) {
-            // Jika belum login, arahkan ke halaman login admin
-            if (!Auth::check()) {
-                return redirect()->route('admin.login');
+        // Jika user adalah admin dan mengakses halaman non-admin, redirect ke dashboard admin
+        if (Auth::check() && Auth::user()->role === 'admin') {
+            // Allow admin routes
+            if ($request->is('admin/*') || $request->is('admin')) {
+                return $next($request);
             }
-            
-            // Jika sudah login tapi bukan admin, arahkan ke home
+            // Redirect admin to their dashboard
+            return redirect()->route('admin.dashboard');
+        }
+
+        // Jika mengakses rute admin tanpa login atau bukan admin
+        if ($request->is('admin/*')) {
+            if (!Auth::check()) {
+                return redirect()->route('login');
+            }
             if (Auth::user()->role !== 'admin') {
                 return redirect('/');
-            }
-        }
-        // Jika bukan rute admin
-        else {
-            // Jika user adalah admin, arahkan ke dashboard admin
-            if (Auth::check() && Auth::user()->role === 'admin') {
-                return redirect()->route('admin.dashboard');
             }
         }
 

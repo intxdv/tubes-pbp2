@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
     // Tampilkan semua produk
     public function index()
     {
+        // Redirect admin to admin dashboard if trying to access homepage
+        if (Auth::check() && Auth::user()->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+        
         $products = Product::all();
         return view('home', compact('products'));
     }

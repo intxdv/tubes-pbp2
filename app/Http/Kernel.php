@@ -18,6 +18,7 @@ class Kernel extends HttpKernel
         \Illuminate\Session\Middleware\StartSession::class,
         \Illuminate\View\Middleware\ShareErrorsFromSession::class,
         \App\Http\Middleware\VerifyCsrfToken::class,
+        \App\Http\Middleware\PreventBackHistory::class,
     ];
 
     /**
@@ -49,6 +50,7 @@ class Kernel extends HttpKernel
         'auth' => \App\Http\Middleware\Authenticate::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'admin.redirect' => AdminRedirect::class,
+        'nocache' => \App\Http\Middleware\PreventBackHistory::class,
         // ... tambahkan middleware lain jika perlu
     ];
 }

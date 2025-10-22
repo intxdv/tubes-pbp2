@@ -29,7 +29,7 @@
             <label for="image">Ganti Gambar Produk</label><br>
             <input type="file" name="image" id="image" class="form-control">
             @if($product->image)
-                <div style="margin-top:8px;"><img src="{{ asset('storage/'.$product->image) }}" alt="Gambar Produk" style="max-width:120px; border-radius:6px;"></div>
+                <div style="margin-top:8px;"><img src="{{ asset('images/' . rawurlencode($product->image)) }}" alt="Gambar Produk" style="max-width:120px; border-radius:6px;"></div>
             @endif
         </div>
     <button type="submit" style="background:#2563eb; color:white; border:none; padding:10px 24px; border-radius:6px; font-weight:500;">Simpan Perubahan</button>
